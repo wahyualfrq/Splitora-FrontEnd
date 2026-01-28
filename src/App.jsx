@@ -10,6 +10,7 @@ export default function App() {
   const [pdfPreview, setPdfPreview] = useState(null)
   const [excel, setExcel] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null) // State baru untuk error
   const fileInputRef = useRef(null)
 
   // Inisialisasi AOS dengan Konfigurasi Repetitif
@@ -28,20 +29,56 @@ export default function App() {
     };
   }, [pdfPreview]);
 
+  // Efek untuk menghilangkan error otomatis setelah 5 detik
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handlePdfChange = (e) => {
     const file = e.target.files[0];
-    if (file && file.type === "application/pdf") {
-      setPdf(file);
-      const previewUrl = URL.createObjectURL(file);
-      setPdfPreview(previewUrl);
-      // Refresh AOS untuk menghitung ulang posisi elemen baru (iframe)
-      setTimeout(() => AOS.refresh(), 200);
+    setError(null); // Reset error setiap ada perubahan
+
+    if (file) {
+      if (file.type === "application/pdf") {
+        setPdf(file);
+        const previewUrl = URL.createObjectURL(file);
+        setPdfPreview(previewUrl);
+        // Refresh AOS untuk menghitung ulang posisi elemen baru (iframe)
+        setTimeout(() => AOS.refresh(), 200);
+      } else {
+        // Notifikasi jika file bukan PDF
+        setError("File Yang kamu Upload Salah atau tidak Sama!");
+        setPdf(null);
+        setPdfPreview(null);
+        e.target.value = ""; // Reset input file
+      }
+    }
+  };
+
+  const handleExcelChange = (e) => {
+    const file = e.target.files[0];
+    setError(null);
+
+    if (file) {
+      const allowedExtensions = /(\.xlsx|\.xls)$/i;
+      if (allowedExtensions.exec(file.name)) {
+        setExcel(file);
+      } else {
+        // Notifikasi jika file bukan Excel
+        setError("File Yang kamu Upload Salah atau tidak Sama!");
+        setExcel(null);
+        e.target.value = "";
+      }
     }
   };
 
   const submit = async () => {
-    if (!pdf) return alert('PDF wajib diupload')
-    if (mode === 'rename' && !excel) return alert('Excel wajib diupload')
+    setError(null);
+    if (!pdf) return setError('File Yang kamu Upload Salah atau tidak Sama!');
+    if (mode === 'rename' && !excel) return setError('File Yang kamu Upload Salah atau tidak Sama!');
 
     setLoading(true)
     try {
@@ -53,7 +90,7 @@ export default function App() {
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
-      alert(e.message)
+      setError(e.message || "Terjadi kegagalan sistem. Coba lagi nanti.");
     } finally {
       setLoading(false)
     }
@@ -80,30 +117,6 @@ export default function App() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#03060a]/50 to-[#03060a]" />
       </div>
-
-      {/* 1. NAVBAR: Morphglass Design */}
-      <nav className="sticky top-4 z-50 max-w-5xl mx-auto px-4 drop-shadow-2xl">
-        <div className="bg-white/[0.04] backdrop-blur-2xl border border-white/10 rounded-2xl px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-emerald-400 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.5)]">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#03060a] fill-current">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-              </svg>
-            </div>
-            <span className="font-black text-lg tracking-tighter text-white uppercase">Splitora</span>
-          </div>
-          
-          <div className="hidden md:flex items-center gap-8 text-[11px] font-black tracking-[0.3em] text-slate-400">
-            <a href="#how-it-works" className="hover:text-cyan-400 transition-colors uppercase">Workflow</a>
-            <a href="#engine" className="hover:text-cyan-400 transition-colors uppercase">Engine</a>
-            <a href="#features" className="hover:text-cyan-400 transition-colors uppercase">Features</a>
-          </div>
-
-          <button className="px-5 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-[10px] font-bold text-white hover:bg-white/10 hover:scale-105 transition-all active:scale-95 uppercase tracking-widest">
-            Portal
-          </button>
-        </div>
-      </nav>
 
       <main className="relative z-10 pt-20">
         
@@ -166,13 +179,13 @@ export default function App() {
                     onClick={() => setMode('split')}
                     className={`py-3.5 text-[11px] font-black rounded-xl transition-all duration-300 uppercase tracking-widest ${mode === 'split' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]' : 'text-slate-500 hover:text-slate-300'}`}
                   >
-                    Standard
+                    Split PDF
                   </button>
                   <button 
                     onClick={() => setMode('rename')}
                     className={`py-3.5 text-[11px] font-black rounded-xl transition-all duration-300 uppercase tracking-widest ${mode === 'rename' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]' : 'text-slate-500 hover:text-slate-300'}`}
                   >
-                    Renaming
+                    Rename PDF
                   </button>
                 </div>
               </div>
@@ -190,7 +203,8 @@ export default function App() {
                   <div className="space-y-4 animate-in fade-in zoom-in-95 duration-700">
                     <div className="flex justify-between items-center px-1">
                       <label className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em]">Neural Preview</label>
-                      <button onClick={() => {setPdf(null); setPdfPreview(null);}} className="text-[10px] text-red-400 font-black uppercase hover:text-red-300 transition-colors">Eject</button>
+                      {/* MODIFIKASI: Klik Eject akan menghapus PDF dan Excel */}
+                      <button onClick={() => {setPdf(null); setPdfPreview(null); setExcel(null);}} className="text-[10px] text-red-400 font-black uppercase hover:text-red-300 transition-colors">Eject</button>
                     </div>
                     <div className="h-72 rounded-[2.5rem] border border-white/10 overflow-hidden bg-black/80 shadow-inner relative group">
                       <iframe src={`${pdfPreview}#toolbar=0`} className="w-full h-full opacity-50 grayscale hover:grayscale-0 hover:opacity-90 transition-all duration-1000" title="PDF Preview" />
@@ -203,7 +217,7 @@ export default function App() {
                   <div className="space-y-3 animate-in slide-in-from-top-4 duration-500">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-1">Logic Mapping (Excel)</label>
                     <div className="relative group p-5 border border-white/10 rounded-2xl bg-white/[0.02] backdrop-blur-sm flex items-center gap-5 hover:border-cyan-500/40 transition-all cursor-pointer">
-                      <input type="file" accept=".xlsx,.xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setExcel(e.target.files[0])} />
+                      <input type="file" accept=".xlsx,.xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleExcelChange} />
                       <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center text-cyan-400 border border-cyan-500/20 group-hover:scale-105 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                       </div>
@@ -213,20 +227,32 @@ export default function App() {
                 )}
               </div>
 
-              <button
-                onClick={submit}
-                disabled={loading}
-                className="group relative w-full h-16 rounded-[1.5rem] font-black text-[#03060a] text-[12px] uppercase tracking-[0.4em] transition-all active:scale-[0.98] disabled:opacity-40 overflow-hidden shadow-[0_20px_45px_rgba(34,211,238,0.3)]"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-emerald-400 group-hover:scale-110 transition-transform duration-500" />
-                <span className="relative z-10 flex items-center justify-center gap-3">
-                  {loading ? (
-                    <><div className="w-4 h-4 border-2 border-[#03060a]/30 border-t-[#03060a] rounded-full animate-spin" /> Node Processing...</>
-                  ) : (
-                    <>Run Logic Engine <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 stroke-[3.5px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></>
-                  )}
-                </span>
-              </button>
+              {/* AREA PEMBERITAHUAN ERROR - TEPAT DI ATAS BUTTON */}
+              <div className="flex flex-col gap-4">
+                {error && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="text-[11px] font-bold uppercase tracking-wider">{error}</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={submit}
+                  disabled={loading}
+                  className="group relative w-full h-16 rounded-[1.5rem] font-black text-[#03060a] text-[12px] uppercase tracking-[0.4em] transition-all active:scale-[0.98] disabled:opacity-40 overflow-hidden shadow-[0_20px_45px_rgba(34,211,238,0.3)]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-emerald-400 group-hover:scale-110 transition-transform duration-500" />
+                  <span className="relative z-10 flex items-center justify-center gap-3">
+                    {loading ? (
+                      <><div className="w-4 h-4 border-2 border-[#03060a]/30 border-t-[#03060a] rounded-full animate-spin" /> Node Processing...</>
+                    ) : (
+                      <>Run Logic Engine <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 stroke-[3.5px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></>
+                    )}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -253,7 +279,6 @@ export default function App() {
         </section>
       </main>
 
-      {/* 6. FOOTER */}
       <footer className="border-t border-white/5 bg-black/60 backdrop-blur-md pt-20 pb-10 px-6 relative z-10">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10 mb-16">
           <div data-aos="fade-right" className="flex flex-col items-center md:items-start gap-4">
@@ -264,13 +289,12 @@ export default function App() {
             <p className="text-[10px] text-slate-500 uppercase tracking-[0.4em] font-bold">Secure Processing Node</p>
           </div>
           <div data-aos="fade-left" className="flex gap-12 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-            <a href="#" className="hover:text-cyan-400">Security</a>
-            <a href="#" className="hover:text-cyan-400">API</a>
-            <a href="#" className="hover:text-cyan-400">Support</a>
+            <a href="#" className="hover:text-cyan-400 transition-all text-cyan-400">Security</a>
+            <a href="#" className="hover:text-cyan-400 transition-all">Support</a>
           </div>
         </div>
         <div className="text-center">
-          <p className="text-[9px] text-slate-600 font-black uppercase tracking-[0.5em]">© 2026 SPLITORA CORE &bull; ALL RIGHTS RESERVED</p>
+          <p className="text-[9px] text-slate-600 font-black uppercase tracking-[0.5em]">© 2026 SPLITORA by W4HYOU</p>
         </div>
       </footer>
     </div>
