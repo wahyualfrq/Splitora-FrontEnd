@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { processSplit } from './api'
-// Import AOS Library
 import AOS from 'aos'
 import 'aos/dist/aos.css'
 
@@ -10,75 +9,81 @@ export default function App() {
   const [pdfPreview, setPdfPreview] = useState(null)
   const [excel, setExcel] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null) // State baru untuk error
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   const fileInputRef = useRef(null)
 
-  // Inisialisasi AOS dengan Konfigurasi Repetitif
   useEffect(() => {
     AOS.init({
       duration: 1000,
-      once: false,      // Animasi akan diulang setiap kali masuk viewport
-      mirror: true,     // Animasi dipicu kembali saat scroll naik
+      once: false,
+      mirror: true,
       easing: 'ease-out-cubic',
       anchorPlacement: 'top-bottom',
-    });
+    })
 
-    // Membersihkan URL preview untuk memori
     return () => {
-      if (pdfPreview) URL.revokeObjectURL(pdfPreview);
-    };
-  }, [pdfPreview]);
+      if (pdfPreview) URL.revokeObjectURL(pdfPreview)
+    }
+  }, [pdfPreview])
 
-  // Efek untuk menghilangkan error otomatis setelah 5 detik
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(() => setError(null), 5000)
+      return () => clearTimeout(timer)
     }
-  }, [error]);
+  }, [error])
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [success])
 
   const handlePdfChange = (e) => {
-    const file = e.target.files[0];
-    setError(null); // Reset error setiap ada perubahan
+    const file = e.target.files[0]
+    setError(null)
+    setSuccess(null)
 
     if (file) {
-      if (file.type === "application/pdf") {
-        setPdf(file);
-        const previewUrl = URL.createObjectURL(file);
-        setPdfPreview(previewUrl);
-        // Refresh AOS untuk menghitung ulang posisi elemen baru (iframe)
-        setTimeout(() => AOS.refresh(), 200);
+      if (file.type === 'application/pdf') {
+        setPdf(file)
+        const previewUrl = URL.createObjectURL(file)
+        setPdfPreview(previewUrl)
+        setTimeout(() => AOS.refresh(), 200)
       } else {
-        // Notifikasi jika file bukan PDF
-        setError("File Yang kamu Upload Salah atau tidak Sama!");
-        setPdf(null);
-        setPdfPreview(null);
-        e.target.value = ""; // Reset input file
+        setError('File Yang kamu Upload Salah atau tidak Sama!')
+        setPdf(null)
+        setPdfPreview(null)
+        e.target.value = ''
       }
     }
-  };
+  }
 
   const handleExcelChange = (e) => {
-    const file = e.target.files[0];
-    setError(null);
+    const file = e.target.files[0]
+    setError(null)
+    setSuccess(null)
 
     if (file) {
-      const allowedExtensions = /(\.xlsx|\.xls)$/i;
+      const allowedExtensions = /(\.xlsx|\.xls)$/i
       if (allowedExtensions.exec(file.name)) {
-        setExcel(file);
+        setExcel(file)
       } else {
-        // Notifikasi jika file bukan Excel
-        setError("File Yang kamu Upload Salah atau tidak Sama!");
-        setExcel(null);
-        e.target.value = "";
+        setError('File Yang kamu Upload Salah atau tidak Sama!')
+        setExcel(null)
+        e.target.value = ''
       }
     }
-  };
+  }
 
   const submit = async () => {
-    setError(null);
-    if (!pdf) return setError('File Yang kamu Upload Salah atau tidak Sama!');
-    if (mode === 'rename' && !excel) return setError('File Yang kamu Upload Salah atau tidak Sama!');
+    setError(null)
+    setSuccess(null)
+
+    if (!pdf) return setError('File Yang kamu Upload Salah atau tidak Sama!')
+    if (mode === 'rename' && !excel) return setError('File Yang kamu Upload Salah atau tidak Sama!')
 
     setLoading(true)
     try {
@@ -89,12 +94,14 @@ export default function App() {
       a.download = 'splitora-result.zip'
       a.click()
       URL.revokeObjectURL(url)
+
+      setSuccess('Proses berhasil. File berhasil diunduh.')
     } catch (e) {
-      setError(e.message || "Terjadi kegagalan sistem. Coba lagi nanti.");
+      setError(e.message || 'Terjadi kegagalan sistem. Coba lagi nanti.')
     } finally {
       setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#03060a] text-slate-300 font-sans selection:bg-cyan-500/30 overflow-x-hidden relative">
@@ -238,6 +245,15 @@ export default function App() {
                   </div>
                 )}
 
+                {success && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-[11px] font-bold uppercase tracking-wider">{success}</span>
+                  </div>
+                )}
+
                 <button
                   onClick={submit}
                   disabled={loading}
@@ -246,9 +262,17 @@ export default function App() {
                   <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-emerald-400 group-hover:scale-110 transition-transform duration-500" />
                   <span className="relative z-10 flex items-center justify-center gap-3">
                     {loading ? (
-                      <><div className="w-4 h-4 border-2 border-[#03060a]/30 border-t-[#03060a] rounded-full animate-spin" /> Node Processing...</>
+                      <>
+                        <div className="w-4 h-4 border-2 border-[#03060a]/30 border-t-[#03060a] rounded-full animate-spin" />
+                        Node Processing...
+                      </>
                     ) : (
-                      <>Run Logic Engine <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 stroke-[3.5px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></>
+                      <>
+                        Run Logic Engine
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 stroke-[3.5px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      </>
                     )}
                   </span>
                 </button>
