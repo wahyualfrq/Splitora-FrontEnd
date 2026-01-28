@@ -4,7 +4,7 @@ export async function processSplit({ mode, pdf, excel }) {
   formData.append('pdf', pdf)
   if (mode === 'rename' && excel) formData.append('excel', excel)
 
-  const res = await fetch('http://localhost:8000/api/process', {
+  const res = await fetch('https://splitorabe.onrender.com/api/process', {
     method: 'POST',
     body: formData,
   })
